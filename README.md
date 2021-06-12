@@ -1,7 +1,7 @@
 # LInQer-ts
 The C# Language Integrated Queries ported for Javascript for amazing performance
 
-[![npm version](https://badge.fury.io/js/%40siderite%2Flinqer.svg)](https://badge.fury.io/js/%40siderite%2Flinqer) [![License: MIT](https://img.shields.io/badge/Licence-MIT-blueviolet)](https://opensource.org/licenses/MIT)
+[![npm version](https://badge.fury.io/js/%40siderite%2Flinqer-ts.svg)](https://badge.fury.io/js/%40siderite%2Flinqer-ts) [![License: MIT](https://img.shields.io/badge/Licence-MIT-blueviolet)](https://opensource.org/licenses/MIT)
 
 # Installation
 ```sh
@@ -124,4 +124,4 @@ The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet
 
 # Building the solution
 
-The library has been ported to Typescript. Run **build.bat** to create the .js files from the .ts code.
+The library has been ported to Typescript. Run **build.bat** to create the .js files from the .ts code and copy the documentation to the docs folder
