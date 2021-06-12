@@ -1,18 +1,48 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-this-alias */
 /* eslint-disable @typescript-eslint/no-unused-vars */
+
+import GroupEnumerable from './GroupEnumerable';
+import OrderedEnumerable from './OrderedEnumerable';
+import {
+  _ensureFunction,
+  _ensureIterable,
+  _quickSort,
+  _toArray,
+  _toNumber,
+  IComparer,
+  IEqualityComparer,
+  IFilter,
+  ISelector,
+  IterableType,
+} from './utils';
+
+/**
+ * wrapper class over iterable instances that exposes the methods usually found in .NET LINQ
+ * @template T
+ */
 class Enumerable<T> implements Iterable<T> {
+  /** @internal */
   protected _src: IterableType<T>;
+  /** @internal */
   protected _generator: () => Iterator<T>;
   // indicates that count and elementAt functions will not cause iterating the enumerable
+  /** @internal */
   protected _canSeek: boolean;
+  /** @internal */
   protected _count: null | (() => number);
+  /** @internal */
   protected _tryGetAt: null | ((index: number) => { value: T } | null);
+  /** @internal */
   protected _useQuickSort: boolean;
   // true if the enumerable was iterated at least once
+  /** @internal */
   _wasIterated: boolean;
 
-  // not to be used
+  /**
+   * Do not use directly - use the static 'from' method
+   * @param src
+   */
   protected constructor(src: IterableType<T>) {
     _ensureIterable(src);
     this._src = src;
@@ -33,11 +63,22 @@ class Enumerable<T> implements Iterable<T> {
     this._useQuickSort = true;
   }
 
+  /**
+   * wraps an iterable item into an Enumerable if it's not already one
+   * @template T
+   * @param iterable
+   * @returns from
+   */
   public static from<T>(iterable: IterableType<T>): Enumerable<T> {
     if (iterable instanceof Enumerable) return iterable as Enumerable<T>;
     return new Enumerable<T>(iterable);
   }
 
+  /**
+   * returns an empty Enumerable
+   * @template T
+   * @returns empty
+   */
   public static empty<T>(): Enumerable<T> {
     const result = new Enumerable<T>([]);
     result._count = () => 0;
@@ -46,6 +87,12 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * generates a sequence of integer numbers within a specified range.
+   * @param start
+   * @param count
+   * @returns range
+   */
   public static range(start: number, count: number): Enumerable<number> {
     const gen = function* () {
       for (let i = 0; i < count; i++) {
@@ -62,6 +109,13 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * generates a sequence that contains one repeated value
+   * @template T
+   * @param item
+   * @param count
+   * @returns repeat
+   */
   public static repeat<T>(item: T, count: number): Enumerable<T> {
     const gen = function* () {
       for (let i = 0; i < count; i++) {
@@ -78,25 +132,41 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * the Enumerable instance exposes the same iterator as the wrapped iterable or generator function
+   * @returns [symbol.iterator]
+   */
   public [Symbol.iterator](): Iterator<T> {
     this._wasIterated = true;
     return this._generator();
   }
 
+  /**
+   * Determines whether the Enumerable can seek (lookup an item by index)
+   * @returns
+   */
   public canSeek() {
     this._ensureInternalTryGetAt();
     return this._canSeek;
   }
 
+  /**
+   * Gets the number of items in the enumerable
+   * or throws an error if it needs to be enumerated to get it
+   */
   public get length(): number {
-    this._ensureInternalTryGetAt();
-    if (!this._canSeek)
+    if (!this.canSeek())
       throw new Error(
         'Calling length on this enumerable will iterate it. Use count()'
       );
     return this.count();
   }
 
+  /**
+   * Concatenates two sequences by appending iterable to the existing one
+   * @param iterable
+   * @returns concat
+   */
   public concat(iterable: IterableType<T>): Enumerable<T> {
     _ensureIterable(iterable);
     const self: Enumerable<T> = this;
@@ -125,11 +195,21 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * Returns the number of items in the Enumerable, even if it has to enumerate all items to do it
+   * @returns count
+   */
   public count(): number {
     this._ensureInternalCount();
     return this._count!();
   }
 
+  /**
+   * Returns distinct elements from a sequence.
+   * WARNING: using a comparer makes this slower. Not specifying it uses a Set to determine distinctiveness.
+   * @param [equalityComparer]
+   * @returns distinct
+   */
   public distinct(equalityComparer?: IEqualityComparer<T>): Enumerable<T> {
     const self: Enumerable<T> = this;
     // if the comparer function is not provided, a Set will be used to quickly determine distinctiveness
@@ -164,6 +244,11 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable<T>(gen);
   }
 
+  /**
+   * Returns the element at a specified index in a sequence
+   * @param index
+   * @returns at
+   */
   public elementAt(index: number): T {
     this._ensureInternalTryGetAt();
     const result = this._tryGetAt!(index);
@@ -171,6 +256,12 @@ class Enumerable<T> implements Iterable<T> {
     return result.value;
   }
 
+  /**
+   * Returns the element at a specified index in a sequence
+   * or undefined if the index is out of range.
+   * @param index
+   * @returns at or default
+   */
   public elementAtOrDefault(index: number): T | undefined {
     this._ensureInternalTryGetAt();
     const result = this._tryGetAt!(index);
@@ -178,14 +269,26 @@ class Enumerable<T> implements Iterable<T> {
     return result.value;
   }
 
+  /**
+   * Returns the first element of a sequence
+   * @returns first
+   */
   public first(): T {
     return this.elementAt(0);
   }
 
+  /**
+   * Returns the first element of a sequence, or undefined if no element is found
+   * @returns or default
+   */
   public firstOrDefault(): T | undefined {
     return this.elementAtOrDefault(0);
   }
 
+  /**
+   * Returns the last element of a sequence
+   * @returns last
+   */
   public last(): T {
     this._ensureInternalTryGetAt();
     // if this cannot seek, getting the last element requires iterating the whole thing
@@ -204,6 +307,10 @@ class Enumerable<T> implements Iterable<T> {
     return this.elementAt(count - 1);
   }
 
+  /**
+   * Returns the last element of a sequence, or undefined if no element is found
+   * @returns or default
+   */
   public lastOrDefault(): T | undefined {
     this._ensureInternalTryGetAt();
     if (!this._canSeek) {
@@ -217,6 +324,12 @@ class Enumerable<T> implements Iterable<T> {
     return this.elementAtOrDefault(count - 1);
   }
 
+  /**
+   * Returns the count, minimum and maximum value in a sequence of values.
+   * A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+   * @param [comparer]
+   * @returns stats
+   */
   public stats(comparer?: IComparer<T>): {
     count: number;
     min?: T;
@@ -242,16 +355,35 @@ class Enumerable<T> implements Iterable<T> {
     return agg;
   }
 
+  /**
+   *  Returns the minimum value in a sequence of values.
+   *  A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+   * @param [comparer]
+   * @returns min
+   */
   public min(comparer?: IComparer<T>): T | undefined {
     const stats = this.stats(comparer);
     return stats.count === 0 ? undefined : stats.min;
   }
 
+  /**
+   *  Returns the maximum value in a sequence of values.
+   *  A custom function can be used to establish order (the result 0 means equal, 1 means larger, -1 means smaller)
+   * @param [comparer]
+   * @returns max
+   */
   public max(comparer?: IComparer<T>): T | undefined {
     const stats = this.stats(comparer);
     return stats.count === 0 ? undefined : stats.max;
   }
 
+  /**
+   * Projects each element of a sequence into a new form
+   * (equivalent to Javascript map)
+   * @template TResult
+   * @param selector
+   * @returns select
+   */
   public select<TResult>(selector: ISelector<T, TResult>): Enumerable<TResult> {
     _ensureFunction(selector);
     const self: Enumerable<T> = this;
@@ -278,6 +410,11 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * Bypasses a specified number of elements in a sequence and then returns an Enumerable of the remaining elements
+   * @param nr
+   * @returns skip
+   */
   public skip(nr: number): Enumerable<T> {
     const self: Enumerable<T> = this;
     // the generator just enumerates the first nr numbers then starts yielding values
@@ -302,6 +439,14 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * Takes start elements, ignores howmany elements, continues with the new items and continues with the original enumerable
+   * Equivalent to the value of an array after performing splice on it with the same parameters
+   * @param start
+   * @param howmany
+   * @param newItems
+   * @returns splice
+   */
   public splice(
     start: number,
     howmany: number,
@@ -314,11 +459,19 @@ class Enumerable<T> implements Iterable<T> {
       .concat(this.skip(start + howmany));
   }
 
+  /**
+   * Computes the sum of a sequence of numeric values
+   * @returns sum
+   */
   public sum(): number | undefined {
     const stats = this.sumAndCount();
     return stats.count === 0 ? undefined : stats.sum;
   }
 
+  /**
+   * Computes the sum and count of a sequence of numeric values
+   * @returns and count
+   */
   public sumAndCount(): { sum: number; count: number } {
     const agg = {
       count: 0,
@@ -331,6 +484,11 @@ class Enumerable<T> implements Iterable<T> {
     return agg;
   }
 
+  /**
+   * Returns a specified number of contiguous elements from the start of a sequence
+   * @param nr
+   * @returns take
+   */
   public take(nr: number): Enumerable<T> {
     const self: Enumerable<T> = this;
     // the generator will stop after nr items yielded
@@ -362,6 +520,10 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * Creates an array from an Enumerable
+   * @returns array
+   */
   public toArray(): T[] {
     this._ensureInternalTryGetAt();
     // this should be faster than Array.from(this)
@@ -388,12 +550,22 @@ class Enumerable<T> implements Iterable<T> {
     return arr;
   }
 
+  /**
+   * Similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do count and elementAt without iterating
+   * @returns list
+   */
   public toList(): Enumerable<T> {
     this._ensureInternalTryGetAt();
     if (this._canSeek) return this;
     return Enumerable.from(this.toArray());
   }
 
+  /**
+   * Filters a sequence of values based on a predicate
+   * (equivalent to Javascript filter)
+   * @param condition
+   * @returns where
+   */
   public where(condition: IFilter<T>): Enumerable<T> {
     _ensureFunction(condition);
     const self: Enumerable<T> = this;
@@ -411,8 +583,15 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// Applies an accumulator function over a sequence.
-  /// The specified seed value is used as the initial accumulator value, and the specified function is used to select the result value.
+  /**
+   * Applies an accumulator function over a sequence.
+   * The specified seed value is used as the initial accumulator value, and the specified function is used to select the result value.
+   * (equivalent to Javascript reduce)
+   * @template TAcc
+   * @param accumulator
+   * @param aggregator
+   * @returns aggregate
+   */
   public aggregate<TAcc>(
     accumulator: TAcc,
     aggregator: (acc: TAcc, item: T) => TAcc
@@ -424,13 +603,21 @@ class Enumerable<T> implements Iterable<T> {
     return accumulator;
   }
 
-  /// Determines whether all elements of a sequence satisfy a condition.
+  /**
+   * Determines whether all elements of a sequence satisfy a condition.
+   * @param condition
+   * @returns true if all
+   */
   public all(condition: IFilter<T>): boolean {
     _ensureFunction(condition);
     return !this.any((x) => !condition(x));
   }
 
-  /// Determines whether any element of a sequence exists or satisfies a condition.
+  /**
+   * Determines whether any element of a sequence exists or satisfies a condition.
+   * @param condition
+   * @returns true if any
+   */
   public any(condition: IFilter<T>): boolean {
     _ensureFunction(condition);
     let index = 0;
@@ -441,27 +628,43 @@ class Enumerable<T> implements Iterable<T> {
     return false;
   }
 
-  /// Appends a value to the end of the sequence.
+  /**
+   * Appends a value to the end of the sequence
+   * @param item
+   * @returns append
+   */
   public append(item: T): Enumerable<T> {
     return this.concat([item]);
   }
 
-  /// Computes the average of a sequence of numeric values.
+  /**
+   * Computes the average of a sequence of numeric values
+   * @returns average
+   */
   public average(): number | undefined {
     const stats = this.sumAndCount();
     return stats.count === 0 ? undefined : stats.sum / stats.count;
   }
 
-  /// Returns the same enumerable
+  /**
+   * Returns itself
+   * @returns enumerable
+   */
   public asEnumerable(): Enumerable<T> {
     return this;
   }
 
-  /// Checks the elements of a sequence based on their type
-  /// If type is a string, it will check based on typeof, else it will use instanceof.
-  /// Throws if types are different.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public cast(type: any): Enumerable<T> {
+  /**
+   * Checks the elements of a sequence based on their type
+   *  If type is a string, it will check based on typeof, else it will use instanceof.
+   *  Throws if types are different.
+   * @param type
+   * @returns cast
+   */
+  public cast(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type: any
+  ): Enumerable<T> {
     const f: (x: unknown) => boolean =
       typeof type === 'string'
         ? (x) => typeof x === type
@@ -472,8 +675,13 @@ class Enumerable<T> implements Iterable<T> {
     });
   }
 
-  /// Determines whether a sequence contains a specified element.
-  /// A custom function can be used to determine equality between elements.
+  /**
+   * Determines whether a sequence contains a specified element.
+   * A custom function can be used to determine equality between elements.
+   * @param item
+   * @param [equalityComparer]
+   * @returns true if contains
+   */
   public contains(
     item: T,
     equalityComparer: IEqualityComparer<T> = (i1, i2) => i1 == i2
@@ -482,11 +690,21 @@ class Enumerable<T> implements Iterable<T> {
     return this.any((x) => equalityComparer(x, item));
   }
 
+  /**
+   * Not implemented
+   * @returns if empty
+   */
   public defaultIfEmpty(): never {
     throw new Error('defaultIfEmpty not implemented for Javascript');
   }
 
-  /// Produces the set difference of two sequences WARNING: using the comparer is slower
+  /**
+   * Produces the set difference of two sequences
+   * WARNING: using the comparer is slower
+   * @param iterable
+   * @param [equalityComparer]
+   * @returns except
+   */
   public except(
     iterable: IterableType<T>,
     equalityComparer?: IEqualityComparer<T>
@@ -519,7 +737,13 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// Produces the set intersection of two sequences. WARNING: using a comparer is slower
+  /**
+   * Produces the set intersection of two sequences.
+   *  WARNING: using a comparer is slower
+   * @param iterable
+   * @param [equalityComparer]
+   * @returns intersect
+   */
   public intersect(
     iterable: IterableType<T>,
     equalityComparer?: IEqualityComparer<T>
@@ -552,15 +776,24 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// same as count
+  /**
+   * Same as count
+   * @returns count
+   */
   public longCount(): number {
     return this.count();
   }
 
-  /// Filters the elements of a sequence based on their type
-  /// If type is a string, it will filter based on typeof, else it will use instanceof
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public ofType(type: any): Enumerable<T> {
+  /**
+   * Filters the elements of a sequence based on their type
+   * If type is a string, it will filter based on typeof, else it will use instanceof
+   * @param type
+   * @returns type
+   */
+  public ofType(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type: any
+  ): Enumerable<T> {
     const condition: IFilter<T> =
       typeof type === 'string'
         ? (x) => typeof x === type
@@ -568,12 +801,19 @@ class Enumerable<T> implements Iterable<T> {
     return this.where(condition);
   }
 
-  /// Adds a value to the beginning of the sequence.
+  /**
+   * Adds a value to the beginning of the sequence.
+   * @param item
+   * @returns prepend
+   */
   public prepend(item: T): Enumerable<T> {
     return new Enumerable([item]).concat(this);
   }
 
-  /// Inverts the order of the elements in a sequence.
+  /**
+   * Inverts the order of the elements in a sequence
+   * @returns reverse
+   */
   public reverse(): Enumerable<T> {
     this._ensureInternalTryGetAt();
     const self: Enumerable<T> = this;
@@ -606,20 +846,25 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// Projects each element of a sequence to an iterable and flattens the resulting sequences into one sequence.
+  /**
+   * Projects each element of a sequence to an iterable and flattens the resulting sequences into one sequence
+   * @template TResult
+   * @param [selector]
+   * @returns many
+   */
   public selectMany<TResult>(
     selector?: ISelector<T, Iterable<TResult>>
   ): Enumerable<TResult> {
-    if (typeof selector !== 'undefined') {
+    if (selector) {
       _ensureFunction(selector);
+    } else {
+      selector = (i) => i as unknown as Iterable<TResult>;
     }
     const self: Enumerable<T> = this;
     const gen = function* () {
       let index = 0;
       for (const item of self) {
-        const iter = selector
-          ? selector(item, index)
-          : (item as unknown as Iterable<TResult>);
+        const iter = selector!(item, index);
         _ensureIterable(iter);
         for (const child of iter) {
           yield child;
@@ -630,7 +875,12 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// Determines whether two sequences are equal and in the same order according to an equality comparer.
+  /**
+   * Determines whether two sequences are equal and in the same order according to an equality comparer
+   * @param iterable
+   * @param [equalityComparer]
+   * @returns true if equal
+   */
   public sequenceEqual(
     iterable: IterableType<T>,
     equalityComparer: IEqualityComparer<T> = (i1, i2) => i1 == i2
@@ -652,7 +902,10 @@ class Enumerable<T> implements Iterable<T> {
     return true;
   }
 
-  /// Returns the single element of a sequence and throws if it doesn't have exactly one
+  /**
+   * Returns the single element of a sequence and throws if it doesn't have exactly one
+   * @returns single
+   */
   public single(): T {
     const iterator = this[Symbol.iterator]();
     let val = iterator.next();
@@ -663,7 +916,10 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// Returns the single element of a sequence or undefined if none found. It throws if the sequence contains multiple items.
+  /**
+   * Returns the single element of a sequence or undefined if none found. It throws if the sequence contains multiple items
+   * @returns or default
+   */
   public singleOrDefault(): T | undefined {
     const iterator = this[Symbol.iterator]();
     let val = iterator.next();
@@ -674,7 +930,12 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument.
+  /**
+   * Selects the elements starting at the given start argument, and ends at, but does not include, the given end argument
+   * @param [start]
+   * @param [end]
+   * @returns slice
+   */
   public slice(start = 0, end?: number): Enumerable<T> {
     let enumerable: Enumerable<T> = this;
     // when the end is defined and positive and start is negative,
@@ -700,7 +961,11 @@ class Enumerable<T> implements Iterable<T> {
     return enumerable;
   }
 
-  /// Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted.
+  /**
+   * Returns a new enumerable collection that contains the elements from source with the last nr elements of the source collection omitted
+   * @param nr
+   * @returns last
+   */
   public skipLast(nr: number): Enumerable<T> {
     const self: Enumerable<T> = this;
     // the generator is using a buffer to cache nr values
@@ -739,7 +1004,11 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.
+  /**
+   * Bypasses elements in a sequence as long as a specified condition is true and then returns the remaining elements.
+   * @param condition
+   * @returns while
+   */
   public skipWhile(condition: IFilter<T>): Enumerable<T> {
     _ensureFunction(condition);
     const self: Enumerable<T> = this;
@@ -759,7 +1028,11 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// Returns a new enumerable collection that contains the last nr elements from source.
+  /**
+   * Returns a new enumerable collection that contains the last nr elements from source
+   * @param nr
+   * @returns last
+   */
   public takeLast(nr: number): Enumerable<T> {
     this._ensureInternalTryGetAt();
     const self: Enumerable<T> = this;
@@ -801,7 +1074,11 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// Returns elements from a sequence as long as a specified condition is true, and then skips the remaining elements.
+  /**
+   * Returns elements from a sequence as long as a specified condition is true, and then skips the remaining elements
+   * @param condition
+   * @returns while
+   */
   public takeWhile(condition: IFilter<T>): Enumerable<T> {
     _ensureFunction(condition);
     const self: Enumerable<T> = this;
@@ -819,14 +1096,40 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
+  /**
+   * Not implemented (use toMap)
+   * @returns dictionary
+   */
   public toDictionary(): never {
     throw new Error('use toMap or toObject instead of toDictionary');
   }
 
-  /// creates a map from an Enumerable
+  /**
+   * Creates a map from an Enumerable based on a key function and a value function
+   * @template TKey
+   * @template TResult
+   * @param keySelector
+   * @param valueSelector
+   * @returns map
+   */
   public toMap<TKey, TResult>(
     keySelector: ISelector<T, TKey>,
-    valueSelector: ISelector<T, TResult> = (i) => i as unknown as TResult
+    valueSelector: ISelector<T, TResult>
+  ): Map<TKey, TResult>;
+
+  /**
+   * Creates a map from an Enumerable based on a key function and the value from the Enumerable
+   * @template TKey
+   * @template TResult
+   * @param keySelector
+   * @returns map
+   */
+  public toMap<TKey>(keySelector: ISelector<T, TKey>): Map<TKey, T>;
+
+  public toMap<TKey, TResult>(
+    keySelector: ISelector<T, TKey>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    valueSelector: ISelector<T, any> = (i) => i
   ): Map<TKey, TResult> {
     _ensureFunction(keySelector);
     _ensureFunction(valueSelector);
@@ -839,14 +1142,22 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// creates an object from an enumerable
+  /**
+   * Creates an object from an enumerable
+   * @param keySelector
+   * @param [valueSelector]
+   * @returns object
+   */
   public toObject(
     keySelector: ISelector<T, string>,
-    valueSelector: ISelector<T, T> = (x) => x
-  ): { [key: string]: T } {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    valueSelector: ISelector<T, any> = (x) => x
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): { [key: string]: any } {
     _ensureFunction(keySelector);
     _ensureFunction(valueSelector);
-    const result: { [key: string]: T } = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: { [key: string]: any } = {};
     let index = 0;
     for (const item of this) {
       result[keySelector(item, index)] = valueSelector(item);
@@ -855,11 +1166,18 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * Not implemented (use toSet)
+   * @returns hash set
+   */
   public toHashSet(): never {
     throw new Error('use toSet instead of toHashSet');
   }
 
-  /// creates a set from an enumerable
+  /**
+   * Creates a set from an enumerable
+   * @returns set
+   */
   public toSet(): Set<T> {
     const result = new Set<T>();
     for (const item of this) {
@@ -868,7 +1186,12 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// Produces the set union of two sequences.
+  /**
+   * Produces the set union of two sequences
+   * @param iterable
+   * @param [equalityComparer]
+   * @returns union
+   */
   public union(
     iterable: IterableType<T>,
     equalityComparer?: IEqualityComparer<T>
@@ -877,6 +1200,10 @@ class Enumerable<T> implements Iterable<T> {
     return this.concat(iterable).distinct(equalityComparer);
   }
 
+  /**
+   * Returns a randomized sequence of items from an initial source
+   * @returns shuffle
+   */
   public shuffle(): Enumerable<T> {
     const self = this;
     function* gen() {
@@ -897,7 +1224,12 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// implements random reservoir sampling of k items, with the option to specify a maximum limit for the items
+  /**
+   * Implements random reservoir sampling of k items, with the option to specify a maximum limit for the items
+   * @param k
+   * @param [limit]
+   * @returns sample
+   */
   public randomSample(
     k: number,
     limit: number = Number.MAX_SAFE_INTEGER
@@ -938,7 +1270,12 @@ class Enumerable<T> implements Iterable<T> {
     return Enumerable.from(sample);
   }
 
-  /// returns the distinct values based on a hashing function
+  /**
+   * Returns the distinct values based on a hashing function
+   * @template TResult
+   * @param hashFunc
+   * @returns by hash
+   */
   public distinctByHash<TResult>(
     hashFunc: ISelector<T, TResult>
   ): Enumerable<T> {
@@ -957,7 +1294,13 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// returns the values that have different hashes from the items of the iterable provided
+  /**
+   * Returns the values that have different hashes from the items of the iterable provided
+   * @template TResult
+   * @param iterable
+   * @param hashFunc
+   * @returns by hash
+   */
   public exceptByHash<TResult>(
     iterable: IterableType<T>,
     hashFunc: ISelector<T, TResult>
@@ -976,7 +1319,13 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// returns the values that have the same hashes as items of the iterable provided
+  /**
+   * Returns the values that have the same hashes as items of the iterable provided
+   * @template TResult
+   * @param iterable
+   * @param hashFunc
+   * @returns by hash
+   */
   public intersectByHash<TResult>(
     iterable: IterableType<T>,
     hashFunc: ISelector<T, TResult>
@@ -995,8 +1344,13 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// returns the index of a value in an ordered enumerable or false if not found
-  /// WARNING: use the same comparer as the one used in the ordered enumerable. The algorithm assumes the enumerable is already sorted.
+  /**
+   * returns the index of a value in an ordered enumerable or false if not found
+   * WARNING: use the same comparer as the one used in the ordered enumerable. The algorithm assumes the enumerable is already sorted.
+   * @param value
+   * @param [comparer]
+   * @returns search
+   */
   public binarySearch(
     value: T,
     comparer: IComparer<T> = this._defaultComparer
@@ -1019,11 +1373,24 @@ class Enumerable<T> implements Iterable<T> {
     return false;
   }
 
+  /**
+   * Joins each item of the enumerable with previous items from the same enumerable
+   * @template TResult
+   * @param offset
+   * @param zipper
+   * @returns lag
+   */
   public lag<TResult>(
     offset: number,
     zipper: (item1: T, item2?: T) => TResult
   ): Enumerable<TResult>;
+  /**
+   * Joins each item of the enumerable with previous items from the same enumerable
+   * @param offset
+   * @returns lag
+   */
   public lag(offset: number): Enumerable<[T, T | undefined]>;
+
   /// joins each item of the enumerable with previous items from the same enumerable
   public lag(
     offset: number,
@@ -1081,11 +1448,24 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * Joins each item of the enumerable with next items from the same enumerable
+   * @template TResult
+   * @param offset
+   * @param zipper
+   * @returns lead
+   */
   public lead<TResult>(
     offset: number,
     zipper: (item1: T, item2?: T) => TResult
   ): Enumerable<TResult>;
+  /**
+   * Joins each item of the enumerable with next items from the same enumerable
+   * @param offset
+   * @returns lead
+   */
   public lead(offset: number): Enumerable<[T, T | undefined]>;
+
   /// joins each item of the enumerable with next items from the same enumerable
   public lead(
     offset: number,
@@ -1149,7 +1529,12 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// returns an enumerable of at least minLength, padding the end with a value or the result of a function
+  /**
+   * Returns an enumerable of at least minLength, padding the end with a value or the result of a function
+   * @param minLength
+   * @param filler
+   * @returns end
+   */
   public padEnd(
     minLength: number,
     filler: T | ((index: number) => T)
@@ -1199,8 +1584,13 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// returns an enumerable of at least minLength, padding the start with a value or the result of a function
-  /// if the enumerable cannot seek, then it will be iterated minLength time
+  /**
+   * Returns an enumerable of at least minLength, padding the start with a value or the result of a function
+   * if the enumerable cannot seek, then it will be iterated minLength time
+   * @param minLength
+   * @param filler
+   * @returns start
+   */
   public padStart(
     minLength: number,
     filler: T | ((index: number) => T)
@@ -1273,11 +1663,26 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
+  /**
+   * Applies a specified function to the corresponding elements of two sequences, producing a sequence of the results.
+   * @template TOther
+   * @template TResult
+   * @param iterable
+   * @param zipper
+   * @returns zip
+   */
   public zip<TOther, TResult>(
     iterable: IterableType<TOther>,
     zipper: (item1: T, item2: TOther, index: number) => TResult
   ): Enumerable<TResult>;
+  /**
+   * Takes the corresponding elements of two sequences, producing a sequence of tuples of elements.
+   * @template TOther
+   * @param iterable
+   * @returns zip
+   */
   public zip<TOther>(iterable: IterableType<TOther>): Enumerable<[T, TOther]>;
+
   /// Applies a specified function to the corresponding elements of two sequences, producing a sequence of the results.
   public zip<TOther>(
     iterable: IterableType<TOther>,
@@ -1309,6 +1714,12 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
+  /**
+   * Groups the elements of a sequence
+   * @template TKey
+   * @param keySelector
+   * @returns by
+   */
   public groupBy<TKey>(
     keySelector: ISelector<T, TKey>
   ): Enumerable<GroupEnumerable<T, TKey>> {
@@ -1338,8 +1749,19 @@ class Enumerable<T> implements Iterable<T> {
     return result;
   }
 
-  /// Correlates the elements of two sequences based on key equality and groups the results. A specified equalityComparer is used to compare keys.
-  /// WARNING: using the equality comparer will be slower
+  /**
+   * Correlates the elements of two sequences based on key equality and groups the results. A specified equalityComparer is used to compare keys
+   * WARNING: using the equality comparer will be slower
+   * @template TOther
+   * @template TKey
+   * @template TResult
+   * @param iterable
+   * @param innerKeySelector
+   * @param outerKeySelector
+   * @param resultSelector
+   * @param [equalityComparer]
+   * @returns join
+   */
   public groupJoin<TOther, TKey, TResult>(
     iterable: IterableType<TOther>,
     innerKeySelector: ISelector<T, TKey>,
@@ -1389,8 +1811,19 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
-  /// Correlates the elements of two sequences based on matching keys.
-  /// WARNING: using the equality comparer will be slower
+  /**
+   * Correlates the elements of two sequences based on matching keys
+   * WARNING: using the equality comparer will be slower
+   * @template TOther
+   * @template TKey
+   * @template TResult
+   * @param iterable
+   * @param innerKeySelector
+   * @param outerKeySelector
+   * @param resultSelector
+   * @param [equalityComparer]
+   * @returns join
+   */
   public join<TOther, TKey, TResult>(
     iterable: IterableType<TOther>,
     innerKeySelector: ISelector<T, TKey>,
@@ -1440,17 +1873,34 @@ class Enumerable<T> implements Iterable<T> {
     return new Enumerable(gen);
   }
 
+  /**
+   * Not implemented (use groupBy)
+   * @returns lookup
+   */
   public toLookup(): never {
     throw new Error('use groupBy instead of toLookup');
   }
 
+  /**
+   * Sorts the elements of a sequence in ascending order
+   * @template TOther
+   * @param keySelector
+   * @returns by
+   */
   public orderBy<TOther>(
     keySelector: ISelector<T, TOther>
   ): OrderedEnumerable<T>;
+  /**
+   * Sorts the elements of a sequence in ascending order
+   * @returns by
+   */
   public orderBy(): OrderedEnumerable<T>;
+
   /// Sorts the elements of a sequence in ascending order.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public orderBy(keySelector?: ISelector<T, any>): OrderedEnumerable<T> {
+  public orderBy(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    keySelector?: ISelector<T, any>
+  ): OrderedEnumerable<T> {
     if (keySelector) {
       _ensureFunction(keySelector);
     } else {
@@ -1459,10 +1909,21 @@ class Enumerable<T> implements Iterable<T> {
     return new OrderedEnumerable(this, keySelector, true);
   }
 
+  /**
+   * Sorts the elements of a sequence in descending order
+   * @template TOther
+   * @param keySelector
+   * @returns by descending
+   */
   public orderByDescending<TOther>(
     keySelector: ISelector<T, TOther>
   ): OrderedEnumerable<T>;
+  /**
+   * Sorts the elements of a sequence in descending order
+   * @returns by descending
+   */
   public orderByDescending(): OrderedEnumerable<T>;
+
   /// Sorts the elements of a sequence in descending order.
   public orderByDescending(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1476,24 +1937,42 @@ class Enumerable<T> implements Iterable<T> {
     return new OrderedEnumerable(this, keySelector, false);
   }
 
-  /// use QuickSort for ordering (default). Recommended when take, skip, takeLast, skipLast are used after orderBy
+  /**
+   * use QuickSort for ordering (default). Recommended when take, skip, takeLast, skipLast are used after orderBy
+   * @returns quick sort
+   */
   public useQuickSort(): Enumerable<T> {
     this._useQuickSort = true;
     return this;
   }
 
-  /// use the default browser sort implementation for ordering at all times
+  /**
+   * use the default browser sort implementation for ordering at all times
+   * @returns browser sort
+   */
   public useBrowserSort(): Enumerable<T> {
     this._useQuickSort = false;
     return this;
   }
 
+  /**
+   * Sorts an array in place using Quicksort
+   * @template T
+   * @param arr
+   * @param [comparer]
+   * @returns sort
+   */
   public static sort<T>(arr: T[], comparer?: IComparer<T>): T[] {
     _quickSort<T>(arr, 0, arr.length - 1, comparer, 0, Number.MAX_SAFE_INTEGER);
     return arr;
   }
 
-  // if the internal count function is not defined, set it to the most appropriate one
+  /**
+   * If the internal count function is not defined, set it to the most appropriate one
+   * @internal
+   * @template T
+   * @returns internal count
+   */
   private _ensureInternalCount<T>(): void {
     const enumerable = this;
     if (enumerable._count) return;
@@ -1522,8 +2001,13 @@ class Enumerable<T> implements Iterable<T> {
       return x;
     };
   }
-  // ensure there is an internal indexer function adequate for this enumerable
-  // this also determines if the enumerable can seek
+
+  /**
+   * Ensure there is an internal indexer function adequate for this enumerable
+   * This also determines if the enumerable can seek
+   * @internal
+   * @returns
+   */
   protected _ensureInternalTryGetAt() {
     const enumerable = this;
     if (enumerable._tryGetAt) return;
@@ -1588,393 +2072,13 @@ class Enumerable<T> implements Iterable<T> {
     };
   }
 
+  // default comparer function
+  /** @internal */
   private _defaultComparer: IComparer<T> = (item1, item2) => {
     if (item1 > item2) return 1;
     if (item1 < item2) return -1;
     return 0;
   };
 }
-
-class GroupEnumerable<T, TKey> extends Enumerable<T> {
-  key: TKey;
-  constructor(iterable: IterableType<T>, key: TKey) {
-    super(iterable);
-    this.key = key;
-  }
-}
-
-enum RestrictionType {
-  skip,
-  skipLast,
-  take,
-  takeLast,
-}
-
-class OrderedEnumerable<T> extends Enumerable<T> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _keySelectors: { keySelector: ISelector<T, any>; ascending: boolean }[];
-  _restrictions: { type: RestrictionType; nr: number }[];
-
-  constructor(
-    src: IterableType<T>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    keySelector?: ISelector<T, any>,
-    ascending = true
-  ) {
-    super(src);
-    this._keySelectors = [];
-    this._restrictions = [];
-    if (keySelector) {
-      this._keySelectors.push({
-        keySelector: keySelector,
-        ascending: ascending,
-      });
-    }
-    const self: OrderedEnumerable<T> = this;
-    // generator gets an array of the original,
-    // sorted inside the interval determined by functions such as skip, take, skipLast, takeLast
-    this._generator = function* () {
-      const { startIndex, endIndex, arr } = this.getSortedArray();
-      if (arr) {
-        for (let index = startIndex; index < endIndex; index++) {
-          yield arr[index];
-        }
-      }
-    };
-
-    // the count is the difference between the end and start indexes
-    // if no skip/take functions were used, this will be the original count
-    this._count = () => {
-      const totalCount = Enumerable.from(self._src).count();
-      const { startIndex, endIndex } = this.getStartAndEndIndexes(
-        self._restrictions,
-        totalCount
-      );
-      return endIndex - startIndex;
-    };
-    // an ordered enumerable cannot seek
-    this._canSeek = false;
-    this._tryGetAt = () => {
-      throw new Error('Ordered enumerables cannot seek');
-    };
-  }
-
-  private getSortedArray() {
-    const self = this;
-    let startIndex: number;
-    let endIndex: number;
-    let arr: T[] | null = null;
-    const innerEnumerable = Enumerable.from(self._src);
-    // try to avoid enumerating the entire original into an array
-    if (innerEnumerable.canSeek()) {
-      ({ startIndex, endIndex } = self.getStartAndEndIndexes(
-        self._restrictions,
-        innerEnumerable.count()
-      ));
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      arr = Array.from(self._src as any);
-      ({ startIndex, endIndex } = self.getStartAndEndIndexes(
-        self._restrictions,
-        arr.length
-      ));
-    }
-    if (startIndex < endIndex) {
-      if (!arr) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        arr = Array.from(self._src as any);
-      }
-      // only quicksort supports partial ordering inside an interval
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sort: (item1: any, item2: any) => void = self._useQuickSort
-        ? (a, c) => _quickSort(a, 0, a.length - 1, c, startIndex, endIndex)
-        : (a, c) => a.sort(c);
-      const sortFunc = self.generateSortFunc(self._keySelectors);
-      sort(arr, sortFunc);
-      return {
-        startIndex,
-        endIndex,
-        arr,
-      };
-    } else {
-      return {
-        startIndex,
-        endIndex,
-        arr: null,
-      };
-    }
-  }
-
-  private generateSortFunc(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    selectors: { keySelector: ISelector<T, any>; ascending: boolean }[]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): (i1: any, i2: any) => number {
-    // simplify the selectors into an array of comparers
-    const comparers = selectors.map((s) => {
-      const f = s.keySelector;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const comparer = (i1: any, i2: any) => {
-        const k1 = f(i1);
-        const k2 = f(i2);
-        if (k1 > k2) return 1;
-        if (k1 < k2) return -1;
-        return 0;
-      };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return s.ascending ? comparer : (i1: any, i2: any) => -comparer(i1, i2);
-    });
-    // optimize the resulting sort function in the most common case
-    // (ordered by a single criterion)
-    return comparers.length == 1
-      ? comparers[0]
-      : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (i1: any, i2: any) => {
-          for (let i = 0; i < comparers.length; i++) {
-            const v = comparers[i](i1, i2);
-            if (v) return v;
-          }
-          return 0;
-        };
-  }
-
-  /// calculate the interval in which an array needs to have ordered items for this ordered enumerable
-  private getStartAndEndIndexes(
-    restrictions: { type: RestrictionType; nr: number }[],
-    arrLength: number
-  ) {
-    let startIndex = 0;
-    let endIndex = arrLength;
-    for (const restriction of restrictions) {
-      switch (restriction.type) {
-        case RestrictionType.take:
-          endIndex = Math.min(endIndex, startIndex + restriction.nr);
-          break;
-        case RestrictionType.skip:
-          startIndex = Math.min(endIndex, startIndex + restriction.nr);
-          break;
-        case RestrictionType.takeLast:
-          startIndex = Math.max(startIndex, endIndex - restriction.nr);
-          break;
-        case RestrictionType.skipLast:
-          endIndex = Math.max(startIndex, endIndex - restriction.nr);
-          break;
-      }
-    }
-    return { startIndex, endIndex };
-  }
-
-  public thenBy<TKey>(keySelector: ISelector<T, TKey>): OrderedEnumerable<T> {
-    this._keySelectors.push({ keySelector: keySelector, ascending: true });
-    return this;
-  }
-
-  public thenByDescending<TKey>(
-    keySelector: ISelector<T, TKey>
-  ): OrderedEnumerable<T> {
-    this._keySelectors.push({ keySelector: keySelector, ascending: false });
-    return this;
-  }
-
-  public take(nr: number): OrderedEnumerable<T> {
-    this._restrictions.push({ type: RestrictionType.take, nr: nr });
-    return this;
-  }
-
-  public takeLast(nr: number): OrderedEnumerable<T> {
-    this._restrictions.push({ type: RestrictionType.takeLast, nr: nr });
-    return this;
-  }
-
-  public skip(nr: number): OrderedEnumerable<T> {
-    this._restrictions.push({ type: RestrictionType.skip, nr: nr });
-    return this;
-  }
-
-  public skipLast(nr: number): OrderedEnumerable<T> {
-    this._restrictions.push({ type: RestrictionType.skipLast, nr: nr });
-    return this;
-  }
-
-  public toArray(): T[] {
-    const { startIndex, endIndex, arr } = this.getSortedArray();
-    return arr ? arr.slice(startIndex, endIndex) : [];
-  }
-
-  public toMap<TKey, TValue>(
-    keySelector: ISelector<T, TKey>,
-    valueSelector: ISelector<T, TValue> = (x) => x as unknown as TValue
-  ): Map<TKey, TValue> {
-    _ensureFunction(keySelector);
-    _ensureFunction(valueSelector);
-    const result = new Map<TKey, TValue>();
-    const arr = this.toArray();
-    for (let i = 0; i < arr.length; i++) {
-      result.set(keySelector(arr[i], i), valueSelector(arr[i], i));
-    }
-    return result;
-  }
-
-  public toObject<TValue>(
-    keySelector: ISelector<T, string>,
-    valueSelector: ISelector<T, TValue> = (x) => x as unknown as TValue
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): { [key: string]: any } {
-    _ensureFunction(keySelector);
-    _ensureFunction(valueSelector);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: { [key: string]: any } = {};
-    const arr = this.toArray();
-    for (let i = 0; i < arr.length; i++) {
-      result[keySelector(arr[i], i)] = valueSelector(arr[i], i);
-    }
-    return result;
-  }
-
-  public toSet(): Set<T> {
-    const result = new Set<T>();
-    const arr = this.toArray();
-    for (let i = 0; i < arr.length; i++) {
-      result.add(arr[i]);
-    }
-    return result;
-  }
-}
-
-const _insertionSortThreshold = 64;
-/// insertion sort is used for small intervals
-function _insertionsort<T>(
-  arr: T[],
-  leftIndex: number,
-  rightIndex: number,
-  comparer: IComparer<T>
-) {
-  for (let j = leftIndex; j <= rightIndex; j++) {
-    const key = arr[j];
-    let i = j - 1;
-    while (i >= leftIndex && comparer(arr[i], key) > 0) {
-      arr[i + 1] = arr[i];
-      i--;
-    }
-    arr[i + 1] = key;
-  }
-}
-
-/// swap two items in an array by index
-function _swapArrayItems<T>(
-  array: T[],
-  leftIndex: number,
-  rightIndex: number
-): void {
-  const temp = array[leftIndex];
-  array[leftIndex] = array[rightIndex];
-  array[rightIndex] = temp;
-}
-
-// Quicksort partition by center value coming from both sides
-function _partition<T>(
-  items: T[],
-  left: number,
-  right: number,
-  comparer: IComparer<T>
-) {
-  const pivot = items[(right + left) >> 1];
-  while (left <= right) {
-    while (comparer(items[left], pivot) < 0) {
-      left++;
-    }
-    while (comparer(items[right], pivot) > 0) {
-      right--;
-    }
-    if (left < right) {
-      _swapArrayItems(items, left, right);
-      left++;
-      right--;
-    } else {
-      if (left === right) return left + 1;
-    }
-  }
-  return left;
-}
-
-/// optimized Quicksort algorithm
-function _quickSort<T>(
-  items: T[],
-  left: number,
-  right: number,
-  comparer: IComparer<T> = (i1, i2) => (i1 > i2 ? 1 : i1 < i2 ? -1 : 0),
-  minIndex = 0,
-  maxIndex: number = Number.MAX_SAFE_INTEGER
-) {
-  if (!items.length) return items;
-
-  // store partition indexes to be processed in here
-  const partitions: { left: number; right: number }[] = [];
-  partitions.push({ left, right });
-  let size = 1;
-  // the actual size of the partitions array never decreases
-  // but we keep score of the number of partitions in 'size'
-  // and we reuse slots whenever possible
-  while (size) {
-    const partition = ({ left, right } = partitions[size - 1]);
-    if (right - left < _insertionSortThreshold) {
-      _insertionsort(items, left, right, comparer);
-      size--;
-      continue;
-    }
-    const index = _partition(items, left, right, comparer);
-    if (left < index - 1 && index - 1 >= minIndex) {
-      partition.right = index - 1;
-      if (index < right && index < maxIndex) {
-        partitions[size] = { left: index, right };
-        size++;
-      }
-    } else {
-      if (index < right && index < maxIndex) {
-        partition.left = index;
-      } else {
-        size--;
-      }
-    }
-  }
-  return items;
-}
-
-// throw if src is not a generator function or an iterable
-function _ensureIterable<T>(src: IterableType<T>): void {
-  if (src) {
-    if ((src as Iterable<T>)[Symbol.iterator]) return;
-    if (
-      typeof src === 'function' &&
-      // eslint-disable-next-line @typescript-eslint/ban-types
-      (src as Function).constructor.name === 'GeneratorFunction'
-    )
-      return;
-  }
-  throw new Error('the argument must be iterable!');
-}
-// throw if f is not a function
-function _ensureFunction<T>(f: T): void {
-  if (!f || typeof f !== 'function')
-    throw new Error('the argument needs to be a function!');
-}
-// return Nan if this is not a number
-// different from Number(obj), which would cast strings to numbers
-function _toNumber<T>(obj: T): number {
-  return typeof obj === 'number' ? obj : Number.NaN;
-}
-// return the iterable if already an array or use Array.from to create one
-function _toArray<T>(iterable: IterableType<T>): Array<T> {
-  if (!iterable) return [];
-  if (Array.isArray(iterable)) return iterable;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return Array.from(iterable as any);
-}
-
-type IterableType<T> = Iterable<T> | (() => Iterator<T>);
-type IEqualityComparer<T> = (item1: T, item2: T) => boolean;
-type IComparer<T> = (item1: T, item2: T) => -1 | 0 | 1;
-type ISelector<TItem, TResult> = (item: TItem, index?: number) => TResult;
-type IFilter<T> = ISelector<T, boolean>;
 
 export default Enumerable;

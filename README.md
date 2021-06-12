@@ -42,12 +42,12 @@ https://siderite.dev/blog/linq-in-javascript-linqer. Leave comments there or add
 
 # Hosted
 Find it hosted on GitHub Pages and use it freely in your projects at: 
- - https://siderite.github.io/LInQer/LInQer.min.js - main library
- - https://siderite.github.io/LInQer/LInQer.slim.min.js - only basic functionality
- - https://siderite.github.io/LInQer/LInQer.extra.min.js - extra functionality (needs main Linqer)
+ - https://siderite.github.io/LInQer-ts/lib/LInQer.js - main library
+ - https://siderite.github.io/LInQer-ts/lib/LInQer.min.js - main library minified
 
 # Reference
-Reference **Linqer.slim.js** for the basic methods:
+Reference **Linqer.js** for the basic methods:
+
 - from, empty, range, repeat - static on Linqer.Enumerable
 - length property - same as count, but throws error if the enumerable needs to be enumerated to get the length (no side effects)
 - concat
@@ -65,7 +65,6 @@ Reference **Linqer.slim.js** for the basic methods:
 - toList - similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do *count* and *elementAt* without iterating
 - where
 
-Reference **Linqer.js** for all of the original Enumerable methods, the ones in slim and then the following:
 - aggregate
 - all
 - any
@@ -108,7 +107,6 @@ Reference **Linqer.js** for all of the original Enumerable methods, the ones in 
 - union
 - zip
 
-Reference **Linqer.extra.js** (needs **Linqer.js**) for some additional methods:
 - shuffle - randomizes the enumerable
 - randomSample - implements random reservoir sampling of k items
 - distinctByHash - distinct based on a hashing function, not a comparer - faster
@@ -126,4 +124,4 @@ The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet
 
 # Building the solution
 
-The library has been ported to Typescript. Run **build.bat** to create the .js and .map files from the .ts code.
+The library has been ported to Typescript. Run **build.bat** to create the .js files from the .ts code.

@@ -1,0 +1,318 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>@siderite/linqer-ts</title>
+	<meta name="description" content="Documentation for @siderite/linqer-ts">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="assets/js/search.json" data-base=".">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="index.html" class="title">@siderite/linqer-ts</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+							<input type="checkbox" id="tsd-filter-only-exported" />
+							<label class="tsd-widget" for="tsd-filter-only-exported">Only exported</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="globals.html">Globals</a>
+				</li>
+			</ul>
+			<h1>@siderite/linqer-ts</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<div class="tsd-panel tsd-typography">
+				<a href="#linqer-ts" id="linqer-ts" style="color: inherit; text-decoration: none;">
+					<h1>LInQer-ts</h1>
+				</a>
+				<p>The C# Language Integrated Queries ported for Javascript for amazing performance</p>
+				<p><a href="https://badge.fury.io/js/%40siderite%2Flinqer"><img src="https://badge.fury.io/js/%40siderite%2Flinqer.svg" alt="npm version"></a> <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/Licence-MIT-blueviolet" alt="License: MIT"></a></p>
+				<a href="#installation" id="installation" style="color: inherit; text-decoration: none;">
+					<h1>Installation</h1>
+				</a>
+				<pre><code class="language-sh">$ npm install @siderite/linqer-ts
+</code></pre>
+				<a href="#quick-start" id="quick-start" style="color: inherit; text-decoration: none;">
+					<h1>Quick start</h1>
+				</a>
+				<pre><code class="language-sh">const <span class="hljs-built_in">source</span> = ... an array or a generator <span class="hljs-keyword">function</span> or anything that is iterable... ;
+const enumerable = Enumerable.from(<span class="hljs-built_in">source</span>); // now you can both iterate and use LINQ like <span class="hljs-built_in">functions</span>
+const result = enumerable
+                .<span class="hljs-built_in">where</span>(item=&gt;!!item.value) // like filter
+                .select(item=&gt;{ value: item.value, key: item.name }) // like map
+                .groupBy(item=&gt;item.key)
+                .<span class="hljs-built_in">where</span>(g=&gt;g.length&gt;10)
+                .orderBy(g=&gt;g.key)
+                .selectMany()
+                .skip(15)
+                .take(5);
+<span class="hljs-keyword">for</span> (const item of result) ...
+</code></pre>
+				<p>in Node.js you have to prepend:</p>
+				<pre><code><span class="hljs-attribute">const Enumerable</span> = require(<span class="hljs-string">&#x27;@siderite/linqer&#x27;</span>);
+</code></pre>
+				<p>in Typescript, use:</p>
+				<pre><code><span class="hljs-keyword">import</span> <span class="hljs-string">&#x27;@siderite/linqer-ts&#x27;</span>
+</code></pre>
+				<a href="#licence" id="licence" style="color: inherit; text-decoration: none;">
+					<h1>Licence</h1>
+				</a>
+				<p>MIT</p>
+				<p>Array functions in Javascript create a new array for each operation, which is terribly wasteful. Using iterators and generator functions and objects, we can limit the operations to the items in the array that interest us, not all of them.</p>
+				<a href="#blog-post" id="blog-post" style="color: inherit; text-decoration: none;">
+					<h1>Blog post</h1>
+				</a>
+				<p><a href="https://siderite.dev/blog/linq-in-javascript-linqer">https://siderite.dev/blog/linq-in-javascript-linqer</a>. Leave comments there or add Issues on GitHub for feedback and support.</p>
+				<a href="#hosted" id="hosted" style="color: inherit; text-decoration: none;">
+					<h1>Hosted</h1>
+				</a>
+				<p>Find it hosted on GitHub Pages and use it freely in your projects at: </p>
+				<ul>
+					<li><a href="https://siderite.github.io/LInQer-ts/lib/LInQer.js">https://siderite.github.io/LInQer-ts/lib/LInQer.js</a> - main library</li>
+					<li><a href="https://siderite.github.io/LInQer-ts/lib/LInQer.min.js">https://siderite.github.io/LInQer-ts/lib/LInQer.min.js</a> - main library minified</li>
+				</ul>
+				<a href="#reference" id="reference" style="color: inherit; text-decoration: none;">
+					<h1>Reference</h1>
+				</a>
+				<p>Reference <strong>Linqer.js</strong> for the basic methods:</p>
+				<ul>
+					<li><p>from, empty, range, repeat - static on Linqer.Enumerable</p>
+					</li>
+					<li><p>length property - same as count, but throws error if the enumerable needs to be enumerated to get the length (no side effects)</p>
+					</li>
+					<li><p>concat</p>
+					</li>
+					<li><p>count</p>
+					</li>
+					<li><p>distinct</p>
+					</li>
+					<li><p>elementAt and elementAtOrDefault</p>
+					</li>
+					<li><p>first and firstOrDefault</p>
+					</li>
+					<li><p>last and lastOrDefault</p>
+					</li>
+					<li><p>min, max, stats (min, max and count)</p>
+					</li>
+					<li><p>select</p>
+					</li>
+					<li><p>skip and take</p>
+					</li>
+					<li><p>splice function - kind of useless, but it was an experiment to see if I can make Enumerable appear as an Array-like object</p>
+					</li>
+					<li><p>sum and sumAndCount (sum and count)</p>
+					</li>
+					<li><p>toArray</p>
+					</li>
+					<li><p>toList - similar to toArray, but returns a seekable Enumerable (itself if already seekable) that can do <em>count</em> and <em>elementAt</em> without iterating</p>
+					</li>
+					<li><p>where</p>
+					</li>
+					<li><p>aggregate</p>
+					</li>
+					<li><p>all</p>
+					</li>
+					<li><p>any</p>
+					</li>
+					<li><p>append</p>
+					</li>
+					<li><p>average</p>
+					</li>
+					<li><p>asEnumerable</p>
+					</li>
+					<li><p>cast</p>
+					</li>
+					<li><p>contains</p>
+					</li>
+					<li><p>defaultIfEmpty - throws not implemented</p>
+					</li>
+					<li><p>except</p>
+					</li>
+					<li><p>intersect</p>
+					</li>
+					<li><p>join</p>
+					</li>
+					<li><p>groupBy</p>
+					</li>
+					<li><p>groupJoin</p>
+					</li>
+					<li><p>longCount</p>
+					</li>
+					<li><p>ofType</p>
+					</li>
+					<li><p>orderBy</p>
+					</li>
+					<li><p>orderByDescending</p>
+					</li>
+					<li><p>prepend</p>
+					</li>
+					<li><p>reverse</p>
+					</li>
+					<li><p>selectMany</p>
+					</li>
+					<li><p>sequenceEqual</p>
+					</li>
+					<li><p>single</p>
+					</li>
+					<li><p>singleOrDefault</p>
+					</li>
+					<li><p>skip - on an ordered enumerable</p>
+					</li>
+					<li><p>skipLast - on a regular or ordered enumerable</p>
+					</li>
+					<li><p>skipWhile</p>
+					</li>
+					<li><p>slice</p>
+					</li>
+					<li><p>take - on an ordered enumerable</p>
+					</li>
+					<li><p>takeLast - on a regular or ordered enumerable</p>
+					</li>
+					<li><p>takeWhile</p>
+					</li>
+					<li><p>thenBy - on an ordered enumerable</p>
+					</li>
+					<li><p>thenByDescending - on an ordered enumerable</p>
+					</li>
+					<li><p>toDictionary - throws not implemented</p>
+					</li>
+					<li><p>toLookup - throws not implemented</p>
+					</li>
+					<li><p>toMap</p>
+					</li>
+					<li><p>toObject</p>
+					</li>
+					<li><p>toHashSet - throws not implemented</p>
+					</li>
+					<li><p>toSet</p>
+					</li>
+					<li><p>union</p>
+					</li>
+					<li><p>zip</p>
+					</li>
+					<li><p>shuffle - randomizes the enumerable</p>
+					</li>
+					<li><p>randomSample - implements random reservoir sampling of k items</p>
+					</li>
+					<li><p>distinctByHash - distinct based on a hashing function, not a comparer - faster</p>
+					</li>
+					<li><p>exceptByHash - except based on a hashing function, not a comparer - faster</p>
+					</li>
+					<li><p>intersectByHash - intersect based on a hashing function, not a comparer - faster</p>
+					</li>
+					<li><p>binarySearch - find the index of a value in a sorted enumerable by binary search</p>
+					</li>
+					<li><p>lag - joins each item of the enumerable with previous items from the same enumerable</p>
+					</li>
+					<li><p>lead - joins each item of the enumerable with next items from the same enumerable</p>
+					</li>
+					<li><p>padStart - pad enumerable at the start to a minimum length</p>
+					</li>
+					<li><p>padEnd - pad enumerable at the end to a minimum length</p>
+					</li>
+				</ul>
+				<a href="#original-enumerable-net-class" id="original-enumerable-net-class" style="color: inherit; text-decoration: none;">
+					<h1>Original <em>Enumerable</em> .NET class</h1>
+				</a>
+				<p>The original C# class can be found here: <a href="https://docs.microsoft.com/en-us/dotnet/api/system.linq.enumerable">https://docs.microsoft.com/en-us/dotnet/api/system.linq.enumerable</a> .</p>
+				<a href="#building-the-solution" id="building-the-solution" style="color: inherit; text-decoration: none;">
+					<h1>Building the solution</h1>
+				</a>
+				<p>The library has been ported to Typescript. Run <strong>build.bat</strong> to create the .js files from the .ts code.</p>
+			</div>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class="globals  ">
+						<a href="globals.html"><em>Globals</em></a>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+					<li class=" tsd-kind-class tsd-has-type-parameter">
+						<a href="classes/enumerable.html" class="tsd-kind-icon">Enumerable</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="globals.html#icomparer" class="tsd-kind-icon">IComparer</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="globals.html#iequalitycomparer" class="tsd-kind-icon">IEquality<wbr>Comparer</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="globals.html#ifilter" class="tsd-kind-icon">IFilter</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="globals.html#iselector" class="tsd-kind-icon">ISelector</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="globals.html#iterabletype" class="tsd-kind-icon">Iterable<wbr>Type</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-static"><span class="tsd-kind-icon">Static method</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

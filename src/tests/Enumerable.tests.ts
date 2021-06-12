@@ -1218,6 +1218,7 @@ test('GitHub issue #22', function (assert) {
   assert.deepEqual(result, [1, 2, 2, 3, 4], 'Passed!');
 });
 
+/** @internal */
 function _sign(n: number): 1 | 0 | -1 {
   if (n > 0) return 1;
   if (n < 0) return -1;
