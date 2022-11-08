@@ -330,11 +330,25 @@ class Enumerable<T> implements Iterable<T> {
       min: undefined as T | undefined,
       max: undefined as T | undefined,
     };
-    for (const item of this) {
-      if (typeof agg.min === 'undefined' || comparer(item, agg.min) < 0)
-        agg.min = item;
-      if (typeof agg.max === 'undefined' || comparer(item, agg.max) > 0)
-        agg.max = item;
+    const iterator=this[Symbol.iterator]();
+    let val1=iterator.next();
+    let val2=iterator.next();
+    while (!val1.done && !val2.done)
+    {
+      if (comparer(val1.value,val2.value)>0) {
+        if (agg.max === undefined || comparer(val1.value,agg.max)>0) agg.max=val1.value;
+        if (agg.min === undefined || comparer(val2.value,agg.min)<0) agg.min=val2.value;
+      } else {
+        if (agg.max === undefined || comparer(val2.value,agg.max)>0) agg.max=val2.value;
+        if (agg.min === undefined || comparer(val1.value,agg.min)<0) agg.min=val1.value;
+      }
+      agg.count+=2;
+      val1=iterator.next();
+      val2=iterator.next();
+    }
+    if (!val1.done) {
+      if (agg.max === undefined || comparer(val1.value,agg.max)>0) agg.max=val1.value;
+      else if (agg.min === undefined || comparer(val1.value,agg.min)<0) agg.min=val1.value;
       agg.count++;
     }
     return agg;
