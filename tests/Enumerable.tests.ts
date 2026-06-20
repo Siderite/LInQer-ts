@@ -2,6 +2,7 @@
 import test from 'ava';
 
 import { Enumerable } from '../src/lib/Enumerable.ts';
+//import Enumerable from '@siderite/linqer-ts';
 
 // object and method tests
 

@@ -35,8 +35,9 @@ in browser you have to load linqer.umd.js:
 
 in Typescript, use:
 ```
-import '@siderite/linqer-ts'
+import Enumerable from '@siderite/linqer-ts';
 ```
+
 # Licence
 MIT
 
