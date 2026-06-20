@@ -1,2 +1,0 @@
-
-Linqer={ Enumerable: Enumerable };

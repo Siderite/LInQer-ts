@@ -1,1 +1,3 @@
-export * from './lib/Enumerable';
+import { Enumerable } from "./lib/Enumerable";
+
+export default Enumerable;

@@ -28,6 +28,11 @@ in Node.js you have to prepend:
 const Enumerable = require('@siderite/linqer');
 ```
 
+in browser you have to load linqer.umd.js:
+```
+<script src="https://siderite.github.io/LInQer-ts/dist/linqer.umd.js"></script>
+```
+
 in Typescript, use:
 ```
 import '@siderite/linqer-ts'
@@ -42,8 +47,7 @@ https://siderite.dev/blog/linq-in-javascript-linqer. Leave comments there or add
 
 # Hosted
 Find it hosted on GitHub Pages and use it freely in your projects at: 
- - https://siderite.github.io/LInQer-ts/lib/LInQer.js - main library
- - https://siderite.github.io/LInQer-ts/lib/LInQer.min.js - main library minified
+ - https://siderite.github.io/LInQer-ts/dist/linqer.umd.js - main library minified
 
 # Reference
 Reference **Linqer.js** for the basic methods:
@@ -124,4 +128,4 @@ The original C# class can be found here: https://docs.microsoft.com/en-us/dotnet
 
 # Building the solution
 
-The library has been ported to Typescript. Run **build.bat** to create the .js files from the .ts code and copy the documentation to the docs folder
+The library has been ported to Typescript. Run **npm run build** to create the .js files from the .ts code and run **npm run doc** to generate documentation to the docs folder

@@ -1,0 +1,7 @@
+{
+  "exclude": [
+    "src/index.ts",
+    "tests/",
+    "ava.config.mjs"
+  ]
+}

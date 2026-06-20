@@ -2558,4 +2558,4 @@ type IComparer<T> = (item1: T, item2: T) => -1 | 0 | 1;
 type ISelector<TItem, TResult> = (item: TItem, index?: number) => TResult;
 type IFilter<T> = ISelector<T, boolean>;
 
-export default Enumerable;
+export { Enumerable };

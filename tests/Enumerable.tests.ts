@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import test from 'ava';
 
-import Enumerable from '../lib/Enumerable';
+import { Enumerable } from '../src/lib/Enumerable.ts';
 
 // object and method tests
 
